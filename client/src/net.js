@@ -14,6 +14,7 @@ export const net = {
   roomId: null,
   youId: null,
   look: 0,
+  name: "",
   connected: false,
   wait: 0,
   next: 0,
@@ -59,7 +60,7 @@ function getSocket() {
 
   socket.on("connect", () => {
     net.connected = true;
-    if (net.roomId && (net.screen === "waiting" || net.screen === "riding")) rejoin();
+    if (net.roomId && ["waiting", "riding", "connecting"].includes(net.screen)) rejoin();
     notify();
   });
   socket.on("disconnect", () => {
@@ -120,22 +121,26 @@ function request(event, data) {
 }
 
 function rejoin() {
-  getSocket().emit("join-room", { roomId: net.roomId, clientId, look: net.look }, (res) => {
+  getSocket().emit("join-room", { roomId: net.roomId, clientId, look: net.look, name: net.name }, (res) => {
     if (res && res.ok) {
       net.youId = res.youId ?? net.youId;
       net.screen = res.status === "waiting" ? "waiting" : "riding";
     } else if (res && res.reason === "not-found") net.screen = "expired";
+    else if (res && res.reason === "full") net.screen = "full";
+    else net.screen = "error";
     notify();
   });
 }
 
-export function createRoom(look) {
+export function createRoom(look, name) {
   net.look = look;
-  request("create-room", { clientId, look });
+  net.name = name || "";
+  request("create-room", { clientId, look, name: net.name });
 }
-export function joinRoom(roomId, look) {
+export function joinRoom(roomId, look, name) {
   net.look = look;
-  request("join-room", { roomId, clientId, look });
+  net.name = name || "";
+  request("join-room", { roomId, clientId, look, name: net.name });
 }
 export function sendChat(text) {
   if (getSocket().connected) getSocket().emit("chat", { text });
@@ -149,4 +154,31 @@ export function backToStart() {
   net.bubbles = {};
   resetSim();
   notify();
+}
+
+// ---- 핸드폰에서 앱을 뒤로 보내 두면: 일정 시간 뒤 스스로 연결을 끊어서 서버 부담을 줄인다 ----
+const AWAY_MS = 30000;
+let hideTimer = null;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if ((net.screen === "waiting" || net.screen === "riding") && socket) {
+        net.screen = "away";
+        socket.disconnect(); // 직접 끊으면 자동 재접속도 멈춘다
+        notify();
+      }
+    }, AWAY_MS);
+  } else {
+    clearTimeout(hideTimer);
+  }
+});
+
+// "다시 들어가기" 버튼
+export function comeBack() {
+  net.screen = "connecting";
+  notify();
+  const s = getSocket();
+  if (s.connected) rejoin();
+  else s.connect(); // 연결되면 위의 connect 처리에서 rejoin 이 실행된다
 }

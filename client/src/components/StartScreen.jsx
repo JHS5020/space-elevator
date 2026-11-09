@@ -18,6 +18,13 @@ function Preview({ look }) {
 
 export default function StartScreen({ onStart, joining, busy }) {
   const [i, setI] = useState(0);
+  const [name, setName] = useState(() => {
+    try {
+      return localStorage.getItem("name") || "";
+    } catch {
+      return "";
+    }
+  });
   const n = LOOKS.length;
 
   return (
@@ -43,13 +50,20 @@ export default function StartScreen({ onStart, joining, busy }) {
       </div>
 
       <div className="name">{LOOKS[i].name}</div>
+      <input
+        className="name-input"
+        value={name}
+        maxLength={8}
+        placeholder="이름 (최대 8글자)"
+        onChange={(e) => setName(e.target.value)}
+      />
       <div className="dots">
         {LOOKS.map((_, k) => (
           <button key={k} className={k === i ? "dot on" : "dot"} onClick={() => setI(k)} aria-label={`캐릭터 ${k + 1}`} />
         ))}
       </div>
 
-      <button className="go" disabled={busy} onClick={() => onStart(i)}>
+      <button className="go" disabled={busy} onClick={() => onStart(i, name.trim())}>
         {busy ? "연결하는 중..." : joining ? "탑승하기" : "엘리베이터에 오르기"}
       </button>
     </div>

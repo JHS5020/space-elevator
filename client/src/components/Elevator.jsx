@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sim } from "../sim.js";
 import { SEATS, FLOOR_KM } from "../config.js";
+import { view } from "../view.js";
 
 const WALL = "#d9d2c5";
 const METAL = "#b9bcc2";
@@ -93,7 +94,7 @@ function FloorDisplay() {
         <boxGeometry args={[0.78, 0.43, 0.02]} />
         <meshStandardMaterial color="#2a2623" />
       </mesh>
-      <mesh>
+      <mesh position={[0, 0, 0.012]}>
         <planeGeometry args={[0.7, 0.35]} />
         <meshBasicMaterial map={board.tex} toneMapped={false} />
       </mesh>
@@ -112,6 +113,18 @@ function Seat({ seat }) {
   );
 }
 
+function BackWall() {
+  const ref = useRef();
+  useFrame(() => {
+    ref.current.visible = !view.overview;
+  });
+  return (
+    <group ref={ref}>
+      <Box position={[0, 1.5, 2.05]} args={[4.2, 3, 0.1]} />
+    </group>
+  );
+}
+
 export default function Elevator() {
   return (
     <group>
@@ -120,8 +133,8 @@ export default function Elevator() {
       <Box position={[0, 3.05, 0]} args={[4.2, 0.1, 4.2]} color="#c9c2b5" />
       <Box position={[0, 3.0, 0]} args={[1.8, 0.03, 1.8]} color="#fffbe8" />
 
-      {/* 뒤쪽(카메라 뒤) 벽 */}
-      <Box position={[0, 1.5, 2.05]} args={[4.2, 3, 0.1]} />
+      {/* 뒤쪽(카메라 뒤) 벽: 전체 보기에서는 숨긴다 */}
+      <BackWall />
 
       {/* 왼쪽, 오른쪽 벽: 의자 위에 큰 창문(가로 2.8, 세로 1.3)을 낸다 */}
       {[-2.05, 2.05].map((x) => (

@@ -37,11 +37,11 @@ async function copyText(text) {
 }
 
 function senderName(m) {
-  const name = LOOKS[m.look]?.name.split(" · ")[1] ?? "손님";
+  const name = m.nm || LOOKS[m.look]?.name.split(" · ")[1] || "손님";
   return m.id === net.youId ? `${name} (나)` : name;
 }
 
-export default function Hud() {
+export default function Hud({ overview, onToggleView }) {
   useSyncExternalStore(subscribeNet, getNetRev);
   const [s, setS] = useState(read);
   const [toast, setToast] = useState("");
@@ -78,6 +78,9 @@ export default function Hud() {
       </div>
 
       <button className="invite" onClick={invite}>초대 링크 복사</button>
+      <button className="viewbtn" onClick={onToggleView}>
+        {overview ? "안에서 보기" : "전체 보기"}
+      </button>
       {!net.connected && <div className="banner">연결이 끊겼어요. 다시 연결하는 중...</div>}
 
       {net.screen === "riding" && (

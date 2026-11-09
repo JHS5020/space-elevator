@@ -36,16 +36,16 @@ export function createRoom(id, creator) {
     boardClock: 0,
     events: [],
   };
-  room.boardQueue.push({ owner: creator.clientId, look: creator.look });
+  room.boardQueue.push({ owner: creator.clientId, look: creator.look, name: creator.name });
   spawnQueued(room);
   return room;
 }
 
 export const seatsTaken = (room) => room.people.length + room.boardQueue.length + room.waiting.length;
 
-function makePerson(owner, look, seat) {
+function makePerson(owner, look, seat, name) {
   return {
-    id: idCounter++, owner, connected: true, look, seat,
+    id: idCounter++, owner, name, connected: true, look, seat,
     status: "waiting", stage: "", x: 0, z: OUT_Z, yaw: 0, mode: "stand",
     emote: "none", emoteT: 0, nextEmote: 0, path: [], pi: 0, delay: 0, wantLeave: false,
   };
@@ -62,14 +62,14 @@ function spawnQueued(room) {
     const seat = freeSeat(room);
     if (seat < 0) { room.boardQueue.length = 0; break; }
     const q = room.boardQueue.shift();
-    const p = makePerson(q.owner, q.look, seat);
+    const p = makePerson(q.owner, q.look, seat, q.name);
     room.people.push(p);
     room.events.push({ type: "boarded", owner: q.owner, personId: p.id });
   }
 }
 
 function pullWaiting(room) {
-  for (const w of room.waiting) room.boardQueue.push({ owner: w.owner, look: w.look });
+  for (const w of room.waiting) room.boardQueue.push({ owner: w.owner, look: w.look, name: w.name });
   room.waiting = [];
 }
 
@@ -166,10 +166,10 @@ function wantStop(room) {
 }
 
 // ---------- 입장/퇴장 ----------
-export function addWaiting(room, owner, look) {
+export function addWaiting(room, owner, look, name) {
   const ex = room.waiting.find((w) => w.owner === owner);
-  if (ex) { ex.look = look; return; }
-  room.waiting.push({ owner, look });
+  if (ex) { ex.look = look; ex.name = name; return; }
+  room.waiting.push({ owner, look, name });
   if (room.phase === "opening" || room.phase === "open") pullWaiting(room);
 }
 
@@ -286,7 +286,7 @@ export function snapshot(room) {
     wait: room.waiting.length,
     next: Math.max(0, Math.ceil(BOARD_INTERVAL - room.boardClock)),
     people: room.people.map((p) => ({
-      id: p.id, look: p.look, seat: p.seat, st: p.status,
+      id: p.id, nm: p.name, look: p.look, seat: p.seat, st: p.status,
       x: r3(p.x), z: r3(p.z), yaw: r3(p.yaw), mode: p.mode,
       emote: p.emote, et: Math.round(p.emoteT * 100) / 100,
     })),

@@ -7,6 +7,7 @@ import { sim, subscribe, getRev } from "../sim.js";
 import { net, subscribeNet, getNetRev } from "../net.js";
 
 function Passenger({ person, bubble }) {
+  person.mine = person.id === net.youId;
   const ref = useRef();
   useFrame(() => {
     const g = ref.current;
@@ -17,11 +18,12 @@ function Passenger({ person, bubble }) {
   return (
     <group ref={ref}>
       <Character look={LOOKS[person.look]} state={person} />
-      {bubble && (
-        <Html position={[0, 2.05, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
-          <div className="bubble">{bubble.text}</div>
-        </Html>
-      )}
+      <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
+        <div className="tag">
+          {bubble && <div className="bubble">{bubble.text}</div>}
+          <div className={person.mine ? "nm me" : "nm"}>{person.name}</div>
+        </div>
+      </Html>
     </group>
   );
 }

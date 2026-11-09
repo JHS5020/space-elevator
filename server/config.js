@@ -24,3 +24,6 @@ export const BOARD_INTERVAL = Number(process.env.BOARD_INTERVAL) || 30; // 기�
 export const ROOM_TTL = Number(process.env.ROOM_TTL) || 300; // 빈 방 삭제까지(초)
 export const MAX_ROOMS = 200;
 export const CHAT_MAX = 120;
+export const NAME_MAX = 8; // 이름 글자 수 제한
+// 접속이 끊겨도 이 시간(초) 안에 돌아오면 자리를 유지해요 (새로고침, 잠깐 끊김 대비)
+export const DISCONNECT_GRACE = Number(process.env.DISCONNECT_GRACE) || 15;

@@ -97,6 +97,7 @@ export function step(rawDt) {
       changed = true;
     }
     p.look = sp.look;
+    p.name = sp.nm;
     p.seat = sp.seat;
     p.status = sp.st;
     p.mode = sp.mode;
