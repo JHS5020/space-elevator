@@ -1,10 +1,15 @@
 // ===== 화면용 엘리베이터 상태 =====
 // 엘리베이터 움직임은 "서버"가 계산하고, 이 파일은 서버가 보낸 상태(snapshot)를
 // 3D 화면이 부드럽게 보이도록 다듬어서 sim 에 넣어줍니다.
-import { CRUISE } from "./config.js";
+import { CRUISE, WALK_SPEED, FREE_X, FREE_Z_MIN, FREE_Z_MAX } from "./config.js";
 import { chime } from "./audio.js";
 
+// 내가 1인칭으로 걷는 중일 때의 입력. 서버 답을 기다리지 않고 바로 움직여 보이게(예측) 하는 데 써요.
+export const local = { fp: false, mx: 0, mz: 0 };
+const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 export const sim = {
+  youId: null, // 내 사람 번호 (net.js 가 넣어줘요)
   started: false,
   phase: "lobby",
   t: 0,
@@ -101,7 +106,24 @@ export function step(rawDt) {
     p.seat = sp.seat;
     p.status = sp.st;
     p.mode = sp.mode;
-    if (Math.hypot(sp.x - p.x, sp.z - p.z) > 1.5) {
+    p.ly = sp.ly; // 힐끔 쳐다볼 때 고개 돌릴 각도
+    p.stance = sp.sn; // 기본 자세 (idle / phone / book)
+    if (sp.id === sim.youId && sp.st === "free" && local.fp) {
+      // 내가 1인칭으로 걷는 중: 키 입력대로 바로 움직이고(서버와 같은 규칙),
+      // 서버 위치와 많이 어긋났을 때만 서버 위치로 맞춘다
+      const m = Math.hypot(local.mx, local.mz);
+      const k = m > 1 ? 1 / m : 1;
+      p.x = clampN(p.x + local.mx * k * WALK_SPEED * dt, -FREE_X, FREE_X);
+      p.z = clampN(p.z + local.mz * k * WALK_SPEED * dt, FREE_Z_MIN, FREE_Z_MAX);
+      if (Math.hypot(sp.x - p.x, sp.z - p.z) > 0.9) {
+        p.x = sp.x;
+        p.z = sp.z;
+      } else if (m < 0.05) {
+        p.x = damp(p.x, sp.x, 6, dt);
+        p.z = damp(p.z, sp.z, 6, dt);
+      }
+      p.mode = m > 0.05 ? "walk" : "stand";
+    } else if (Math.hypot(sp.x - p.x, sp.z - p.z) > 1.5) {
       p.x = sp.x;
       p.z = sp.z;
     } else {

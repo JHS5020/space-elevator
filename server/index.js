@@ -8,7 +8,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createRoom, addWaiting, reattach, leaveRoom, findPerson, seatsTaken, stepRoom, snapshot } from "./room.js";
+import { createRoom, addWaiting, reattach, leaveRoom, findPerson, seatsTaken, stepRoom, snapshot, requestEmote, standUp, sitDown, setMove, setAutoEmote, setRps, setStance } from "./room.js";
 import { SEATS, LOOK_COUNT, ROOM_TTL, MAX_ROOMS, CHAT_MAX, BOARD_INTERVAL, NAME_MAX, DISCONNECT_GRACE } from "./config.js";
 
 const PORT = process.env.PORT || 3001;
@@ -76,7 +76,7 @@ io.on("connection", (socket) => {
     const back = reattach(room, data.clientId);
     if (back) {
       bind(room, socket, data.clientId);
-      return reply({ ok: true, roomId: room.id, status: "riding", youId: back.id });
+      return reply({ ok: true, roomId: room.id, status: "riding", youId: back.id, rps: back.rps, auto: back.autoEmote, stance: back.stance });
     }
     if (room.waiting.some((w) => w.owner === data.clientId)) {
       bind(room, socket, data.clientId);
@@ -102,6 +102,63 @@ io.on("connection", (socket) => {
     const text = String(data.text ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, CHAT_MAX);
     if (!text) return;
     io.to(room.id).emit("chat", { id: person.id, nm: person.name, look: person.look, text, ts: now });
+  });
+
+  // 이모션 직접 고르기 (0.8초에 한 번만)
+  socket.on("emote", (data) => {
+    const { roomId, clientId } = socket.data;
+    const room = rooms.get(roomId);
+    if (!room || !data) return;
+    const now = Date.now();
+    if (now - (socket.data.lastEmote || 0) < 800) return;
+    if (requestEmote(room, clientId, data.name)) socket.data.lastEmote = now;
+  });
+
+  // 자동 이모트 켜기/끄기, 가위바위보 손 고르기(null 이면 해제)
+  socket.on("auto-emote", (data, ack) => {
+    const reply = typeof ack === "function" ? ack : () => {};
+    const room = rooms.get(socket.data.roomId);
+    if (!room || !data) return reply({ ok: false });
+    reply({ ok: setAutoEmote(room, socket.data.clientId, !!data.on) });
+  });
+  socket.on("stance-set", (data, ack) => {
+    const reply = typeof ack === "function" ? ack : () => {};
+    const room = rooms.get(socket.data.roomId);
+    if (!room || !data) return reply({ ok: false });
+    reply({ ok: setStance(room, socket.data.clientId, data.stance) });
+  });
+  socket.on("rps-set", (data, ack) => {
+    const reply = typeof ack === "function" ? ack : () => {};
+    const room = rooms.get(socket.data.roomId);
+    if (!room || !data) return reply({ ok: false });
+    reply({ ok: setRps(room, socket.data.clientId, data.hand ?? null) });
+  });
+
+  // 일어서기 / 다시 앉기 (0.5초에 한 번만)
+  socket.on("stand", () => {
+    const room = rooms.get(socket.data.roomId);
+    const now = Date.now();
+    if (!room || now - (socket.data.lastPose || 0) < 500) return;
+    if (standUp(room, socket.data.clientId)) socket.data.lastPose = now;
+  });
+  socket.on("sit", () => {
+    const room = rooms.get(socket.data.roomId);
+    const now = Date.now();
+    if (!room || now - (socket.data.lastPose || 0) < 500) return;
+    if (sitDown(room, socket.data.clientId)) socket.data.lastPose = now;
+  });
+
+  // 걷기 입력: 방향 + 바라보는 방향 (1초에 최대 약 30번)
+  socket.on("move", (data) => {
+    const room = rooms.get(socket.data.roomId);
+    if (!room || !data) return;
+    const now = Date.now();
+    if (now - (socket.data.lastMove || 0) < 30) return;
+    socket.data.lastMove = now;
+    const mx = Number(data.mx), mz = Number(data.mz), yaw = Number(data.yaw);
+    if (![mx, mz, yaw].every(Number.isFinite)) return;
+    const c = (v) => Math.max(-1, Math.min(1, v));
+    setMove(room, socket.data.clientId, c(mx), c(mz), Math.atan2(Math.sin(yaw), Math.cos(yaw)));
   });
 
   socket.on("disconnect", () => {
@@ -136,6 +193,7 @@ setInterval(() => {
     for (const ev of room.events.splice(0)) {
       const sid = room.sockets.get(ev.owner);
       if (ev.type === "boarded" && sid) io.to(sid).emit("you", { status: "riding", personId: ev.personId });
+      if (ev.type === "rps") io.to(room.id).emit("rps", { floor: ev.floor, hand: ev.hand, entries: ev.entries });
     }
     // 계산은 1초에 20번, 화면으로 보내는 건 10번 (데이터 사용량 절약)
     if (tick % 2 === 0) io.to(room.id).volatile.emit("state", snapshot(room));

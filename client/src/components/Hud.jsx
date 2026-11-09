@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { sim } from "../sim.js";
-import { net, subscribeNet, getNetRev, sendChat } from "../net.js";
+import { net, subscribeNet, getNetRev, sendChat, sendEmote, sendRps, sendAutoEmote, sendStance, HAND, HAND_NAME } from "../net.js";
 import { FLOOR_KM, SEATS } from "../config.js";
 import { LOOKS } from "../looks.js";
 
@@ -13,12 +13,33 @@ const PHASE_TEXT = {
   braking: "감속 중",
 };
 
+// 이모션 목록 (name 은 서버/Character 와 같은 이름)
+const EMOTES = [
+  { name: "wave", icon: "👋", label: "손 흔들기" },
+  { name: "nod", icon: "👍", label: "끄덕이기" },
+  { name: "look", icon: "👀", label: "힐끔" },
+  { name: "yawn", icon: "🥱", label: "하품" },
+  { name: "stretch", icon: "🙆", label: "기지개" },
+  { name: "punch", icon: "🥊", label: "주먹" },
+];
+
+// 기본 자세 (서버와 같은 이름)
+const STANCES = [
+  { name: "idle", icon: "🧍", label: "기본" },
+  { name: "phone", icon: "📱", label: "핸드폰" },
+  { name: "book", icon: "📖", label: "책" },
+];
+
+// 가위바위보 손 (서버와 같은 이름)
+const HANDS = ["scissors", "rock", "paper"];
+
 const read = () => ({
   alt: sim.altitude,
   floor: Math.floor(sim.altitude / FLOOR_KM + 1e-6),
   phase: sim.phase,
   pending: sim.stopPending,
   count: sim.people.length,
+  seated: sim.people.some((p) => p.id === net.youId && (p.status === "seated" || p.status === "free")),
 });
 
 async function copyText(text) {
@@ -46,6 +67,7 @@ export default function Hud({ overview, onToggleView }) {
   const [s, setS] = useState(read);
   const [toast, setToast] = useState("");
   const [text, setText] = useState("");
+  const [emoteOpen, setEmoteOpen] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setS(read()), 100);
@@ -64,6 +86,15 @@ export default function Hud({ overview, onToggleView }) {
     if (!text.trim()) return;
     sendChat(text);
     setText("");
+  };
+
+  const pickHand = (hand) => {
+    sendRps(net.rps === hand ? null : hand); // 같은 걸 다시 누르면 해제
+    setEmoteOpen(false);
+  };
+  const pickEmote = (name) => {
+    sendEmote(name);
+    setEmoteOpen(false);
   };
 
   const status = s.phase === "cruise" && s.pending ? "다음 층에 정차해요" : PHASE_TEXT[s.phase] || "";
@@ -93,6 +124,66 @@ export default function Hud({ overview, onToggleView }) {
             ))}
           </div>
           <div className="chat-row">
+            {emoteOpen && (
+              <div className="emote-panel">
+                <div className="emote-row">
+                  {EMOTES.map((e) => (
+                    <button key={e.name} className="emote-item" disabled={!s.seated} onClick={() => pickEmote(e.name)}>
+                      <span className="emote-icon">{e.icon}</span>
+                      <span>{e.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {!s.seated && <div className="emote-hint">자리에 앉거나 서 있을 때 쓸 수 있어요</div>}
+                <div className="emote-sep">자세 · 계속 유지돼요</div>
+                <div className="emote-row">
+                  {STANCES.map((st) => (
+                    <button
+                      key={st.name}
+                      className={net.stance === st.name ? "emote-item picked" : "emote-item"}
+                      onClick={() => {
+                        sendStance(st.name);
+                        setEmoteOpen(false);
+                      }}
+                    >
+                      <span className="emote-icon">{st.icon}</span>
+                      <span>{st.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="emote-sep">가위바위보 · 다음 층(약 10초)에 한 판, 끝나면 해제</div>
+                <div className="emote-row">
+                  {HANDS.map((h) => (
+                    <button
+                      key={h}
+                      className={net.rps === h ? "emote-item picked" : "emote-item"}
+                      onClick={() => pickHand(h)}
+                    >
+                      <span className="emote-icon">{HAND[h]}</span>
+                      <span>{HAND_NAME[h]}</span>
+                    </button>
+                  ))}
+                  <button className="emote-item" disabled={!net.rps} onClick={() => pickHand(net.rps)}>
+                    <span className="emote-icon">🚫</span>
+                    <span>해제</span>
+                  </button>
+                </div>
+                <button
+                  className={net.autoEmote ? "auto-toggle on" : "auto-toggle"}
+                  onClick={() => sendAutoEmote(!net.autoEmote)}
+                >
+                  자동 이모트 · {net.autoEmote ? "켜짐" : "꺼짐"}
+                </button>
+              </div>
+            )}
+            <button
+              className={`emote-btn${emoteOpen ? " on" : ""}${net.autoEmote ? "" : " off"}`}
+              aria-label="이모션"
+              onClick={() => setEmoteOpen((v) => !v)}
+            >
+              😊
+              {net.rps && <span className="rps-badge">{HAND[net.rps]}</span>}
+            </button>
             <input
               value={text}
               maxLength={120}

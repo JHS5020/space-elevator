@@ -44,9 +44,10 @@ function Hair({ style, color }) {
   );
 }
 
-// state = { mode: "stand" | "walk" | "sit", emote: "none" | "wave" | "yawn" | "stretch" | "nod" | "look", emoteT }
+// state = { mode: "stand" | "walk" | "sit", stance: "idle" | "phone" | "book", emote: "none" | "wave" | "yawn" | "stretch" | "nod" | "look" | "punch", emoteT }
 // 이 값은 sim.js의 사람 데이터가 계속 바꿔주고, 여기서는 읽어서 관절만 움직여요.
-export default function Character({ look, state }) {
+// hideHead: 1인칭에서 내 머리가 카메라를 가리지 않게 머리만 숨긴다 (몸/팔/다리는 보임)
+export default function Character({ look, state, hideHead = false }) {
   const joints = useRef({});
   const clock = useRef(Math.random() * 100);
   const ref = (name) => (el) => {
@@ -64,7 +65,7 @@ export default function Character({ look, state }) {
     let hipsY = STAND_Y_HIPS, bob = 0;
     let thL = 0, thR = 0, knL = 0, knR = 0;
     let shLx = 0, shRx = 0, shLz = 0.06, shRz = -0.06, elL = -0.1, elR = -0.1;
-    let torsoX = Math.sin(t * 1.6) * 0.012, headX = 0, headY = 0, mouth = 0.3;
+    let torsoX = Math.sin(t * 1.6) * 0.012, torsoY = 0, headX = 0, headY = 0, mouth = 0.3;
 
     if (state.mode === "walk") {
       const p = t * 8;
@@ -84,8 +85,49 @@ export default function Character({ look, state }) {
       shLz = 0.1;
       shRz = -0.1;
       elL = elR = -1.1;
+    }
 
+    // 기본 자세(스탠스): 핸드폰 / 책 보기. 걷는 중이거나 이모트를 하는 동안에는 잠시 내려놓는다
+    const stance = state.stance;
+    const holding = (stance === "phone" || stance === "book") && state.mode !== "walk" && state.emote === "none";
+    if (holding) {
+      shLx = shRx = -0.2;
+      shLz = -0.5;
+      shRz = 0.5;
+      elL = elR = -2.4;
+      torsoX = 0.05 + Math.sin(t * 1.6) * 0.01;
+      headX = 0.5;
+      if (stance === "phone") {
+        // 두 손으로 핸드폰을 가운데 모아 쥔다 (엄지로 화면을 넘기는 느낌으로 살짝 움직임)
+        shLx = shRx = -0.3;
+        shLz = -0.95;
+        shRz = 0.95;
+        elL = elR = -2.1;
+        shRx += Math.sin(t * 2.3) * 0.02;
+      }
+      else {
+        shLz = -0.4;
+        shRz = 0.4;
+        elL = elR = -2.2;
+        headX = 0.55;
+      }
+    }
+    if (J.phone) J.phone.visible = holding && stance === "phone";
+    if (J.book) J.book.visible = holding && stance === "book";
+    if (J.head) J.head.visible = !hideHead;
+
+    // 이모션: 앉아 있을 때도, 서 있을 때도 (걷는 중에는 서버가 이모션을 끈다)
+    if (state.mode !== "walk") {
       switch (state.emote) {
+        case "punch": {
+          // 주먹 휘두르기: 오른팔을 앞으로 쭉 뻗는 동작을 세 번 (몸통도 살짝 비틀기)
+          const k = Math.max(0, Math.sin(et * 12));
+          shRx = -0.6 - 0.95 * k;
+          shRz = -0.1;
+          elR = -1.6 + 1.55 * k;
+          torsoY = 0.35 * k;
+          break;
+        }
         case "wave": // 손 흔들기
           shRx = 0;
           shRz = -2.5 + Math.sin(et * 9) * 0.25;
@@ -109,9 +151,16 @@ export default function Character({ look, state }) {
         case "nod": // 끄덕끄덕
           headX = 0.05 + Math.sin(et * 6) * 0.22;
           break;
-        case "look": // 두리번
-          headY = Math.sin(et * 1.6) * 0.8;
+        case "look": {
+          // 힐끔: 서버가 정해준 방향(ly)으로 고개를 돌렸다가 돌아옴
+          if (state.ly === undefined) {
+            headY = Math.sin(et * 1.6) * 0.8;
+          } else {
+            const env = Math.min(1, et / 0.45) * Math.min(1, Math.max(0, 3.5 - et) / 0.6);
+            headY = state.ly * env;
+          }
           break;
+        }
         default:
           break;
       }
@@ -132,6 +181,7 @@ export default function Character({ look, state }) {
     ap(J.elL, "x", elL);
     ap(J.elR, "x", elR);
     ap(J.torso, "x", torsoX);
+    ap(J.torso, "y", torsoY, 14);
     ap(J.head, "x", headX);
     ap(J.head, "y", headY);
     J.mouth.scale.y = damp(J.mouth.scale.y, mouth, 12, dt);
@@ -171,6 +221,30 @@ export default function Character({ look, state }) {
               </group>
             </group>
           ))}
+
+          {/* 손에 든 물건: 핸드폰 / 책 (평소에는 숨김) */}
+          <group ref={ref("phone")} position={[0, 0.42, 0.28]} rotation={[0.55, 0, 0]} visible={false}>
+            <mesh>
+              <boxGeometry args={[0.09, 0.18, 0.012]} />
+              <meshStandardMaterial color="#14161b" roughness={0.4} />
+            </mesh>
+            <mesh position={[0, 0, -0.0066]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[0.078, 0.16]} />
+              <meshBasicMaterial color="#8fd0ff" />
+            </mesh>
+          </group>
+          <group ref={ref("book")} position={[0, 0.4, 0.27]} rotation={[0.55, 0, 0]} visible={false}>
+            <mesh position={[0, 0, 0.012]}>
+              <boxGeometry args={[0.3, 0.2, 0.012]} />
+              <meshStandardMaterial color="#7a2a2a" roughness={0.8} />
+            </mesh>
+            {[-1, 1].map((s) => (
+              <mesh key={s} position={[s * 0.072, 0, -0.002]} rotation={[0, -s * 0.2, 0]}>
+                <boxGeometry args={[0.14, 0.18, 0.012]} />
+                <meshStandardMaterial color="#f3eee2" roughness={0.9} />
+              </mesh>
+            ))}
+          </group>
 
           <group ref={ref("head")} position={[0, 0.78, 0]}>
             <Ball r={0.17} color={look.skin} />

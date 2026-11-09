@@ -157,8 +157,8 @@ button {
 .chat-row{display:flex;gap:6px}
 .chat-row input{flex:1;min-width:0;background:rgba(30,28,26,.85);color:#eee;border:1px solid #4a423a;border-radius:999px;padding:10px 14px;font-size:16px;outline:none}
 .chat-row input:focus{border-color:#f2b266}
-.chat-row button{background:#f2b266;color:#1a1512;border:0;border-radius:999px;padding:0 16px;font-weight:700}
-.bubble{background:rgba(255,255,255,.95);color:#222;padding:6px 12px;border-radius:14px;font-size:13px;max-width:180px;word-break:break-all;white-space:normal;text-align:center}
+.chat-row > button:not(.emote-btn){background:#f2b266;color:#1a1512;border:0;border-radius:999px;padding:0 16px;font-weight:700}
+.bubble{background:rgba(255,255,255,.95);color:#222;padding:6px 12px;border-radius:14px;font-size:13px;width:max-content;max-width:180px;word-break:keep-all;overflow-wrap:anywhere;white-space:normal;text-align:center}
 .waiting{position:absolute;inset:0;background:rgba(10,8,7,.55);display:flex;align-items:center;justify-content:center;pointer-events:none}
 .waiting-card{background:rgba(21,17,16,.92);border:1px solid #4a423a;border-radius:20px;padding:28px 40px;text-align:center;margin:0 16px}
 .waiting-title{font-size:24px;font-weight:700;color:#f2b266}
@@ -187,3 +187,101 @@ button {
 .nm{background:rgba(20,18,16,.7);color:#eee;padding:2px 10px;border-radius:999px;font-size:12px;white-space:nowrap}
 .nm.me{color:#f2b266}
 @media (max-width: 640px){.viewbtn{top:50px;right:10px;padding:7px 12px;font-size:12px}}
+
+/* ---------- 이모션 버튼 ---------- */
+.chat-row{position:relative}
+.emote-btn{flex:none;width:42px;height:42px;padding:0;border-radius:50%;background:rgba(30,28,26,.85);border:1px solid #4a423a;font-size:20px;line-height:1}
+.emote-btn.on{border-color:#f2b266;background:rgba(60,46,30,.95)}
+.emote-panel{position:absolute;left:0;bottom:calc(100% + 8px);display:flex;flex-wrap:wrap;gap:6px;max-width:100%;background:rgba(21,17,16,.95);border:1px solid #4a423a;border-radius:16px;padding:8px}
+.emote-item{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:54px;background:rgba(40,35,31,.95);color:#eee;border:1px solid #4a423a;border-radius:12px;padding:6px 4px;font-size:11px}
+.emote-item:disabled{opacity:.4;cursor:default}
+.emote-icon{font-size:22px;line-height:1}
+.emote-hint{flex-basis:100%;text-align:center;font-size:12px;opacity:.75}
+
+/* ---------- 1인칭 / 일어서기 / 조작 버튼 ---------- */
+.fpbtn{position:absolute;top:104px;right:16px;background:rgba(30,28,26,.8);color:#f2b266;border:1px solid #f2b266;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700}
+.seatbtn{position:absolute;left:16px;bottom:48px;background:#f2b266;color:#1a1512;border:0;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700}
+.fpbtn:disabled,.seatbtn:disabled{opacity:.45;cursor:default}
+.keyhint{position:absolute;left:16px;bottom:16px;font-size:12px;opacity:.7;pointer-events:none}
+.pad,.fly{display:none}
+.hold{width:48px;height:48px;padding:0;border-radius:50%;background:rgba(30,28,26,.6);color:#f2b266;border:1px solid rgba(242,178,102,.6);font-size:18px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hold:active{background:rgba(242,178,102,.35)}
+@media (pointer:coarse), (max-width:640px){
+  .pad{display:grid;position:absolute;left:12px;bottom:190px;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:4px}
+  .p-up{grid-area:1/2}
+  .p-left{grid-area:2/1}
+  .p-right{grid-area:2/3}
+  .p-down{grid-area:3/2}
+  .fly{display:flex;flex-direction:column;gap:8px;position:absolute;right:12px;bottom:262px}
+  .keyhint{display:none}
+  .seatbtn{left:auto;right:10px;bottom:196px;padding:9px 14px;font-size:13px}
+  .fpbtn{top:88px;right:10px;padding:7px 12px;font-size:12px}
+}
+
+/* ---------- 이모트 패널 보강: 가위바위보 / 자동 이모트 ---------- */
+.emote-btn{position:relative}
+.rps-badge{position:absolute;right:-4px;top:-6px;font-size:14px;background:#241e1a;border:1px solid #f2b266;border-radius:999px;padding:0 3px;line-height:1.3}
+.emote-panel{flex-direction:column;flex-wrap:nowrap;gap:6px}
+.emote-row{display:flex;flex-wrap:wrap;gap:6px}
+.emote-item.picked{border-color:#f2b266;background:rgba(90,66,36,.95)}
+.emote-sep{font-size:11px;opacity:.75;text-align:center;border-top:1px solid #4a423a;padding-top:6px}
+.auto-toggle{background:rgba(40,35,31,.95);color:#bbb;border:1px solid #4a423a;border-radius:999px;padding:7px 12px;font-size:12px}
+.auto-toggle.on{color:#1a1512;background:#f2b266;border-color:#f2b266;font-weight:700}
+.bubble{font-size:14px}
+
+/* ---------- 핸드폰 십자키 모양 통일 / 전체화면 버튼 ---------- */
+.hold{display:flex;align-items:center;justify-content:center}
+.p-left svg{transform:rotate(-90deg)}
+.p-right svg{transform:rotate(90deg)}
+.p-down svg{transform:rotate(180deg)}
+.fly .hold{width:auto;height:40px;border-radius:999px;padding:0 16px;font-size:13px;font-weight:700}
+.fsbtn{display:none;position:absolute;top:146px;right:16px;background:rgba(30,28,26,.8);color:#f2b266;border:1px solid #f2b266;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700}
+@media (pointer:coarse){ .fsbtn{display:block;top:126px;right:10px;padding:7px 12px;font-size:12px} }
+
+/* ---------- 핸드폰 가로 화면 ---------- */
+@media (orientation:landscape) and (max-height:520px) and (pointer:coarse){
+  .hud{top:8px;left:8px;right:150px;gap:5px}
+  .pill{padding:5px 10px;font-size:11px}
+  .invite{top:8px;right:8px;padding:5px 10px;font-size:11px}
+  .viewbtn{top:40px;right:8px;padding:5px 10px;font-size:11px}
+  .fpbtn{top:70px;right:8px;padding:5px 10px;font-size:11px}
+  .fsbtn{top:100px;right:8px;padding:5px 10px;font-size:11px}
+  .chat{left:auto;right:8px;bottom:8px;width:240px;max-width:none;gap:5px}
+  .chat-line{padding:4px 10px;font-size:12px}
+  .chat-line:nth-last-child(n+4){display:none}
+  .chat-row input{padding:8px 12px}
+  .pad{left:12px;bottom:10px;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}
+  .hold{width:44px;height:44px}
+  .fly .hold{width:auto;height:36px}
+  .fly{left:170px;right:auto;bottom:62px}
+  .seatbtn{left:170px;right:auto;bottom:12px;padding:8px 12px;font-size:12px}
+  .toast{bottom:60px}
+}
+
+/* 이모트 패널이 다른 버튼 위로 보이게 */
+.chat{z-index:30}
+@media (orientation:landscape) and (max-height:520px) and (pointer:coarse){
+  .emote-panel{padding:6px;gap:4px}
+  .emote-row{gap:4px}
+  .emote-item{min-width:46px;padding:4px 3px;font-size:10px;gap:1px}
+  .emote-icon{font-size:18px}
+  .emote-sep{padding-top:4px;font-size:10px}
+  .auto-toggle{padding:5px 10px;font-size:11px}
+}
+
+/* ---------- 버튼 스타일 정리 (채팅 줄 안의 이모트 버튼 쏠림/색 버그 수정) ---------- */
+.chat-row .emote-btn{display:flex;align-items:center;justify-content:center;padding:0;width:42px;height:42px;border-radius:50%;background:rgba(30,28,26,.85);color:#eee;border:1px solid #4a423a;font-size:20px;line-height:1}
+.chat-row .emote-btn.on{border-color:#f2b266;background:rgba(60,46,30,.95)}
+.chat-row .emote-btn.off{opacity:.5;filter:grayscale(1)}
+.emote-panel{max-height:calc(100vh - 90px);overflow-y:auto}
+.emote-item{cursor:pointer}
+.auto-toggle{width:100%;cursor:pointer}
+.auto-toggle:not(.on){background:#2a2522;color:#8a8279;border-color:#3a342f;text-decoration:line-through}
+.auto-toggle.on{text-decoration:none}
+.me-badge{background:#f2b266;color:#1a1512;font-size:9px;font-weight:800;line-height:1.4;padding:0 6px;border-radius:999px;letter-spacing:.5px}
+.fs-help{position:absolute;inset:0;background:rgba(10,8,7,.78);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60}
+.fs-card{background:#1c1714;border:1px solid #4a423a;border-radius:18px;padding:20px 22px;max-width:360px;font-size:14px;line-height:1.6}
+.fs-card h3{margin:0 0 8px;color:#f2b266;font-size:17px}
+.fs-card ol{margin:8px 0 12px;padding-left:20px}
+.fs-card button{width:100%;background:#f2b266;color:#1a1512;border:0;border-radius:999px;padding:10px;font-weight:700;font-size:14px}
+.fs-card small{display:block;opacity:.7;margin-bottom:12px}

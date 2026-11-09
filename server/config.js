@@ -1,6 +1,6 @@
 // ===== 서버 설정값 =====
 // 엘리베이터 움직임 값은 client/src/config.js 와 같아야 해요.
-export const CRUISE = 0.8; // 순항 속도 (km/초)
+export const CRUISE = 0.4; // 순항 속도 (km/초) → 1층(4km)을 약 10초에 올라간다
 export const FLOOR_KM = 4; // 한 층의 높이 (km)
 export const ACCEL_TIME = 4;
 export const BRAKE_TIME = 4;
@@ -11,6 +11,11 @@ export const WALK_SPEED = 1.3;
 export const OUT_Z = -3.4;
 export const STAND_X = 1.1;
 export const SEAT_X = 1.78;
+// 일어서서 걸어 다닐 수 있는 범위 (엘리베이터 안쪽만. 문이 열려도 밖으로는 못 나가요)
+// client/src/config.js 와 같아야 해요.
+export const FREE_X = 1.35;
+export const FREE_Z_MIN = -1.7;
+export const FREE_Z_MAX = 1.75;
 
 // 자리 10개: 양쪽 벽에 5개씩 (side -1 왼쪽, 1 오른쪽)
 const Z = [-1.35, -0.7, -0.05, 0.6, 1.25];

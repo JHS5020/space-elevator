@@ -1,6 +1,6 @@
 // ===== 엘리베이터 설정값 모음 (숫자만 바꾸면 느낌이 바뀌어요) =====
 
-export const CRUISE = 0.8; // 순항 속도 (km/초)
+export const CRUISE = 0.4; // 순항 속도 (km/초) → 1층(4km)을 약 10초에 올라간다
 export const FLOOR_KM = 4; // 한 층의 높이 (km)
 export const ACCEL_TIME = 4; // 출발해서 순항 속도가 되기까지 (초)
 export const BRAKE_TIME = 4; // 감속을 시작해서 멈추기까지 (초)
@@ -14,6 +14,12 @@ export const WALK_SPEED = 1.3; // 걷는 속도
 export const OUT_Z = -3.4; // 문 밖(층)에서 기다리는 위치
 export const STAND_X = 1.1; // 의자 앞에 서는 위치 (벽에서 떨어진 거리)
 export const SEAT_X = 1.78; // 앉았을 때 위치
+// 일어서서 걸어 다닐 수 있는 범위 (서버 config 와 같아야 해요)
+export const FREE_X = 1.35;
+export const FREE_Z_MIN = -1.7;
+export const FREE_Z_MAX = 1.75;
+export const EYE_STAND = 1.72; // 1인칭에서 서 있을 때 눈 높이
+export const EYE_SIT = 1.38; // 1인칭에서 앉아 있을 때 눈 높이
 export const STAND_Y_HIPS = 0.95; // 서 있을 때 엉덩이 높이
 export const SEAT_Y_HIPS = 0.58; // 앉았을 때 엉덩이 높이
 

@@ -1,6 +1,7 @@
 // ===== 서버와 통신하는 파일 =====
 import { io } from "socket.io-client";
-import { applySnapshot, resetSim } from "./sim.js";
+import { sim, applySnapshot, resetSim } from "./sim.js";
+import { setMode } from "./controls.js";
 
 // 서버 주소: 개발 중엔 같은 컴퓨터의 3001번 포트, 배포(빌드)하면 화면을 준 서버 자신
 const SERVER_URL =
@@ -20,7 +21,13 @@ export const net = {
   next: 0,
   chat: [],
   bubbles: {},
+  rps: null, // 내가 고른 가위바위보 손 (scissors / rock / paper), 없으면 null
+  autoEmote: true, // 가만히 앉아 있을 때 저절로 하는 이모트
+  stance: "idle", // 기본 자세: idle(기본) / phone(핸드폰 보기) / book(책 읽기)
 };
+
+export const HAND = { scissors: "✌️", rock: "✊", paper: "🖐️" };
+export const HAND_NAME = { scissors: "가위", rock: "바위", paper: "보" };
 
 const listeners = new Set();
 let rev = 0;
@@ -79,31 +86,52 @@ function getSocket() {
     net.next = s.next;
   });
   socket.on("you", (y) => {
-    net.youId = y.personId;
+    net.youId = sim.youId = y.personId;
     net.screen = "riding";
     notify();
   });
   socket.on("chat", (m) => {
     net.chat = [...net.chat, m].slice(-30);
-    net.bubbles = { ...net.bubbles, [m.id]: { text: m.text, until: Date.now() + 6000 } };
+    showBubble(m.id, m.text, 6000);
     notify();
-    setTimeout(() => {
-      const b = net.bubbles[m.id];
-      if (b && Date.now() >= b.until) {
-        const rest = { ...net.bubbles };
-        delete rest[m.id];
-        net.bubbles = rest;
-        notify();
-      }
-    }, 6100);
+  });
+  // 가위바위보 결과: 참가자 머리 위에 손을 보여주고, 채팅 줄에도 한 줄 남긴다
+  socket.on("rps", (r) => {
+    if (r.entries.some((e) => e.id === net.youId)) net.rps = null; // 한 판이 끝나면 내 선택은 해제돼요
+    for (const e of r.entries) showBubble(e.id, `${HAND[e.hand]}${e.win ? " 승리!" : ""}`, 5000);
+    const names = (list) => list.map((e) => e.nm || "손님").join(", ");
+    const text = r.hand
+      ? `${r.floor}층 가위바위보 · ${HAND_NAME[r.hand]} 승리! (${names(r.entries.filter((e) => e.win))})`
+      : `${r.floor}층 가위바위보 · 비겼어요`;
+    net.chat = [...net.chat, { id: 0, nm: "✌️✊🖐️", text, ts: Date.now() }].slice(-30);
+    notify();
   });
   return socket;
+}
+
+// 사람 머리 위 말풍선을 ms 동안 보여준다
+function showBubble(id, text, ms) {
+  const until = Date.now() + ms;
+  net.bubbles = { ...net.bubbles, [id]: { text, until } };
+  notify();
+  setTimeout(() => {
+    const b = net.bubbles[id];
+    if (b && Date.now() >= b.until) {
+      const rest = { ...net.bubbles };
+      delete rest[id];
+      net.bubbles = rest;
+      notify();
+    }
+  }, ms + 100);
 }
 
 function enter(res) {
   if (res && res.ok) {
     net.roomId = res.roomId;
-    net.youId = res.youId ?? null;
+    net.youId = sim.youId = res.youId ?? null;
+    net.rps = res.rps ?? null;
+    net.autoEmote = res.auto ?? true;
+    net.stance = res.stance ?? "idle";
     net.screen = res.status === "waiting" ? "waiting" : "riding";
     history.replaceState(null, "", `?room=${res.roomId}`); // 주소창이 곧 초대 링크
   } else if (res && res.reason === "not-found") net.screen = "expired";
@@ -123,7 +151,10 @@ function request(event, data) {
 function rejoin() {
   getSocket().emit("join-room", { roomId: net.roomId, clientId, look: net.look, name: net.name }, (res) => {
     if (res && res.ok) {
-      net.youId = res.youId ?? net.youId;
+      net.youId = sim.youId = res.youId ?? net.youId;
+      if ("rps" in res) net.rps = res.rps ?? null;
+      if ("auto" in res) net.autoEmote = res.auto ?? true;
+      if ("stance" in res) net.stance = res.stance ?? "idle";
       net.screen = res.status === "waiting" ? "waiting" : "riding";
     } else if (res && res.reason === "not-found") net.screen = "expired";
     else if (res && res.reason === "full") net.screen = "full";
@@ -145,13 +176,67 @@ export function joinRoom(roomId, look, name) {
 export function sendChat(text) {
   if (getSocket().connected) getSocket().emit("chat", { text });
 }
+export function sendEmote(name) {
+  if (getSocket().connected) getSocket().emit("emote", { name });
+}
+// 가위바위보 손 고르기 (hand 가 null 이면 해제)
+export function sendRps(hand) {
+  const prev = net.rps;
+  net.rps = hand;
+  notify();
+  if (!getSocket().connected) return;
+  getSocket().timeout(3000).emit("rps-set", { hand }, (err, res) => {
+    if (err || !res || !res.ok) {
+      net.rps = prev;
+      notify();
+    }
+  });
+}
+export function sendAutoEmote(on) {
+  const prev = net.autoEmote;
+  net.autoEmote = on;
+  notify();
+  if (!getSocket().connected) return;
+  getSocket().timeout(3000).emit("auto-emote", { on }, (err, res) => {
+    if (err || !res || !res.ok) {
+      net.autoEmote = prev;
+      notify();
+    }
+  });
+}
+// 기본 자세 고르기 (idle / phone / book)
+export function sendStance(stance) {
+  const prev = net.stance;
+  net.stance = stance;
+  notify();
+  if (!getSocket().connected) return;
+  getSocket().timeout(3000).emit("stance-set", { stance }, (err, res) => {
+    if (err || !res || !res.ok) {
+      net.stance = prev;
+      notify();
+    }
+  });
+}
+export function sendStand() {
+  if (getSocket().connected) getSocket().emit("stand");
+}
+export function sendSit() {
+  if (getSocket().connected) getSocket().emit("sit");
+}
+export function sendMove(mx, mz, yaw) {
+  if (getSocket().connected) getSocket().volatile.emit("move", { mx, mz, yaw });
+}
 export function backToStart() {
   history.replaceState(null, "", window.location.pathname);
   net.screen = "select";
   net.roomId = null;
-  net.youId = null;
+  net.youId = sim.youId = null;
+  setMode("view");
   net.chat = [];
   net.bubbles = {};
+  net.rps = null;
+  net.autoEmote = true;
+  net.stance = "idle";
   resetSim();
   notify();
 }
