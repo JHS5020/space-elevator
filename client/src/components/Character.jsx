@@ -64,7 +64,7 @@ export default function Character({ look, state, hideHead = false }) {
     // 기본 자세(서 있기)
     let hipsY = STAND_Y_HIPS, bob = 0;
     let thL = 0, thR = 0, knL = 0, knR = 0;
-    let shLx = 0, shRx = 0, shLz = 0.06, shRz = -0.06, elL = -0.1, elR = -0.1;
+    let shLx = 0, shRx = 0, shLz = 0.06, shRz = -0.06, elL = -0.1, elR = -0.1, elLz = 0, elRz = 0;
     let torsoX = Math.sin(t * 1.6) * 0.012, torsoY = 0, headX = 0, headY = 0, mouth = 0.3;
 
     if (state.mode === "walk") {
@@ -98,17 +98,22 @@ export default function Character({ look, state, hideHead = false }) {
       torsoX = 0.05 + Math.sin(t * 1.6) * 0.01;
       headX = 0.5;
       if (stance === "phone") {
-        // 두 손으로 핸드폰을 가운데 모아 쥔다 (엄지로 화면을 넘기는 느낌으로 살짝 움직임)
-        shLx = shRx = -0.3;
-        shLz = -0.95;
-        shRz = 0.95;
-        elL = elR = -2.1;
+        // 핸드폰: 팔꿈치는 몸 옆에 편하게 두고, 팔뚝만 안쪽으로 모아 두 손으로 쥔다 (엄지로 화면을 넘기는 느낌으로 살짝 움직임)
+        shLx = shRx = -0.47;
+        shLz = 0.12;
+        shRz = -0.12;
+        elL = elR = -2.26;
+        elLz = -0.58;
+        elRz = 0.58;
         shRx += Math.sin(t * 2.3) * 0.02;
-      }
-      else {
-        shLz = -0.4;
-        shRz = 0.4;
-        elL = elR = -2.2;
+      } else {
+        // 책: 팔꿈치를 옆으로 벌리고 양쪽 가장자리를 잡는다
+        shLx = shRx = -0.33;
+        shLz = 0.28;
+        shRz = -0.28;
+        elL = elR = -2.28;
+        elLz = -0.41;
+        elRz = 0.41;
         headX = 0.55;
       }
     }
@@ -180,6 +185,8 @@ export default function Character({ look, state, hideHead = false }) {
     ap(J.shR, "z", shRz);
     ap(J.elL, "x", elL);
     ap(J.elR, "x", elR);
+    ap(J.elL, "z", elLz);
+    ap(J.elR, "z", elRz);
     ap(J.torso, "x", torsoX);
     ap(J.torso, "y", torsoY, 14);
     ap(J.head, "x", headX);

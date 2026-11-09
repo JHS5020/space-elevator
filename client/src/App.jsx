@@ -31,7 +31,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Canvas camera={{ position: [0, 1.45, 1.8], fov: 70 }}>
+      <Canvas camera={{ position: [0, 1.45, 1.8], fov: 70, near: 0.05, far: 6000 }}>
         <ambientLight intensity={0.7} />
         <pointLight position={[0, 2.8, 0]} intensity={12} />
         <Outside />
