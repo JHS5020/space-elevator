@@ -285,3 +285,9 @@ button {
 .fs-card ol{margin:8px 0 12px;padding-left:20px}
 .fs-card button{width:100%;background:#f2b266;color:#1a1512;border:0;border-radius:999px;padding:10px;font-weight:700;font-size:14px}
 .fs-card small{display:block;opacity:.7;margin-bottom:12px}
+
+/* ---------- 소리 켜기/끄기 버튼 ---------- */
+.soundbtn{position:absolute;top:146px;right:16px;background:rgba(30,28,26,.8);color:#f2b266;border:1px solid #f2b266;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700}
+@media (max-width: 640px){ .soundbtn{top:126px;right:10px;padding:7px 12px;font-size:12px} }
+@media (pointer:coarse){ .soundbtn{top:168px;right:10px;padding:7px 12px;font-size:12px} }
+@media (orientation:landscape) and (max-height:520px) and (pointer:coarse){ .soundbtn{top:130px;right:8px;padding:5px 10px;font-size:11px} }

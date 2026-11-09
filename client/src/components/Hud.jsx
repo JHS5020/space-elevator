@@ -3,6 +3,7 @@ import { sim } from "../sim.js";
 import { net, subscribeNet, getNetRev, sendChat, sendEmote, sendRps, sendAutoEmote, sendStance, HAND, HAND_NAME } from "../net.js";
 import { FLOOR_KM, SEATS } from "../config.js";
 import { LOOKS } from "../looks.js";
+import { isMuted, setMuted } from "../audio.js";
 
 const PHASE_TEXT = {
   opening: "문이 열리는 중",
@@ -68,6 +69,7 @@ export default function Hud({ overview, onToggleView }) {
   const [toast, setToast] = useState("");
   const [text, setText] = useState("");
   const [emoteOpen, setEmoteOpen] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
 
   useEffect(() => {
     const id = setInterval(() => setS(read()), 100);
@@ -109,6 +111,15 @@ export default function Hud({ overview, onToggleView }) {
       </div>
 
       <button className="invite" onClick={invite}>초대 링크 복사</button>
+      <button
+        className="soundbtn"
+        onClick={() => {
+          setMuted(!muted);
+          setMutedState(!muted);
+        }}
+      >
+        {muted ? "🔇 소리 꺼짐" : "🔊 소리"}
+      </button>
       <button className="viewbtn" onClick={onToggleView}>
         {overview ? "안에서 보기" : "전체 보기"}
       </button>
